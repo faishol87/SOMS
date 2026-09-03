@@ -12,6 +12,10 @@ var salesOrderServiceUrl = builder.Configuration["ServiceUrls:SalesOrderService"
 
 builder.Services.AddHttpClient<CustomerApiService>(client => client.BaseAddress = new Uri(customerServiceUrl));
 builder.Services.AddHttpClient<SalesOrderApiService>(client => client.BaseAddress = new Uri(salesOrderServiceUrl));
+builder.Services.AddTransient<ApiKeyHandler>();
+builder.Services.AddHttpClient<SalesOrderApiService>(client =>
+        client.BaseAddress = new Uri(salesOrderServiceUrl))
+    .AddHttpMessageHandler<ApiKeyHandler>();
 
 var app = builder.Build();
 

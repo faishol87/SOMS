@@ -103,7 +103,7 @@ Browser → FrontEnd (5000) ──GET /api/customers──→ CustomerService (5
 | GET | `/api/orders/{id}` | Detail order + items |
 | POST | `/api/orders` | Buat order — 400 dengan `{ success:false, message, errors[] }` bila validasi gagal |
 | PUT | `/api/orders/{id}` | Update order (replace seluruh item) |
-| DELETE | `/api/orders/{id}` | Hapus order beserta seluruh item (transaksi atomik) |
+| DELETE | `/api/orders/{id}` | Hapus order beserta seluruh item (transaksi atomik) — **wajib header `X-Api-Key`** |
 | GET | `/api/orders/export?keyword=&orderDate=` | Unduh `.xlsx` (data sesuai filter aktif) |
 | POST | `/api/orders/validate` | Validasi & hitung TOTAL baris + grand total |
 
@@ -111,6 +111,74 @@ Browser → FrontEnd (5000) ──GET /api/customers──→ CustomerService (5
 
 ```json
 { "success": false, "message": "Penjelasan singkat", "errors": ["detail error 1", "detail error 2"] }
+```
+
+## Keamanan API (API Key)
+
+Saat ini **satu endpoint** yang diamankan dengan API key:
+
+| Service | Endpoint | Syarat |
+| --- | --- | --- |
+| SalesOrderService | `DELETE /api/orders/{id}` | Header `X-Api-Key: <key>` wajib dikirim |
+
+Key didaftarkan di config **dengan nilai yang sama** di kedua project:
+
+```json
+// SalesOrderService/appsettings.json — dicek oleh attribute [ApiKeyAuth]
+"ApiKey": {
+  "Value": "ganti-dengan-kunci-rahasia-kuat"
+}
+```
+
+```json
+// FrontEnd/appsettings.json — dikirim otomatis oleh ApiKeyHandler
+"ServiceUrls": {
+  "ApiKey": "ganti-dengan-kunci-rahasia-kuat"
+}
+```
+
+> FrontEnd (Blazor Server) mengirim header `X-Api-Key` otomatis pada tiap panggilan ke SalesOrderService, jadi key tidak pernah terekspos ke browser.
+>
+> Di produksi, jangan simpan key asli di `appsettings.json` yang ter-commit — gunakan environment variable (`ApiKey__Value`, `ServiceUrls__ApiKey`) atau secret manager.
+
+## Contoh Pemanggilan API
+
+Semua contoh memakai `curl`. Hanya `DELETE /api/orders/{id}` yang wajib menyertakan header `X-Api-Key`.
+
+```bash
+# 1) Ambil daftar pelanggan — tanpa key
+curl http://localhost:5001/api/customers
+
+# 2) Ambil daftar order + filter (keyword / orderDate opsional)
+curl "http://localhost:5002/api/orders?keyword=SO-001&orderDate=2025-01-15"
+
+# 3) Detail order
+curl http://localhost:5002/api/orders/1
+
+# 4) Buat order — tanpa key
+curl -X POST http://localhost:5002/api/orders \
+  -H "Content-Type: application/json" \
+  -d '{ "orderDate": "2025-01-15", "customerId": 1, "items": [ { "itemName": "Item A", "quantity": 2, "price": 50000 } ] }'
+
+# 5) Hapus order — WAJIB header X-Api-Key
+curl -X DELETE http://localhost:5002/api/orders/1 \
+  -H "X-Api-Key: ganti-dengan-kunci-rahasia-kuat"
+```
+
+Format `.http` (bisa dijalankan dari Visual Studio / VS Code REST Client):
+
+```http
+### Hapus order (butuh API key)
+DELETE http://localhost:5002/api/orders/1
+X-Api-Key: ganti-dengan-kunci-rahasia-kuat
+
+###
+```
+
+Request tanpa key / dengan key salah akan ditolak `401`:
+
+```json
+{ "message": "API key tidak valid atau tidak disediakan" }
 ```
 
 ## Fitur Front-End

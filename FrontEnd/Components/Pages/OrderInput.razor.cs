@@ -204,7 +204,7 @@ public partial class OrderInput
                 OrderDate = _orderDate,
                 CustomerId = _customerId,
                 Address = _address,
-                Items = _items.Select(i => new OrderItemRequest
+                Items = _items.Where(x => x.InputMode == false).Select(i => new OrderItemRequest
                 {
                     ItemName = i.ItemName,
                     Quantity = i.Quantity,

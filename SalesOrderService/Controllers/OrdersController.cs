@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SalesOrderService.Auth;
 using SalesOrderService.DTOs;
 using SalesOrderService.Services;
 
@@ -62,6 +63,7 @@ public class OrdersController : ControllerBase
 
     /// <summary>Hapus order beserta seluruh item.</summary>
     [HttpDelete("{id:int}")]
+    [ApiKeyAuth]
     public async Task<IActionResult> DeleteOrder(int id, CancellationToken ct)
     {
         var result = await _salesOrderService.DeleteOrderAsync(id, ct);
