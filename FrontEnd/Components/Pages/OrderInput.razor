@@ -1,0 +1,172 @@
+@page "/orders/new"
+@page "/orders/edit/{Id:int}"
+@rendermode InteractiveServer
+@using FrontEnd.Models
+@using FrontEnd.Services
+@using System.Globalization
+@inject CustomerApiService CustomerApi 
+@inject SalesOrderApiService SalesOrderApi
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>@(IsEdit ? "Edit Sales Order" : "Add New Sales Order")</PageTitle>
+
+<div class="soms-page">
+    <div class="page-head">
+        <h3 class="page-title">@(IsEdit ? "EDIT - SALES ORDER" : "ADD NEW - SALES ORDER")</h3>
+    </div>
+
+    @if (_formError is { Count: > 0 })
+    {
+        <div class="alert alert-danger alert-dismissible">
+            <div>
+                @foreach (var err in _formError)
+                {
+                    <div>@err</div>
+                }
+            </div>
+            <button type="button" class="btn-close" aria-label="Close" @onclick="DismissError"></button>
+        </div>
+    }
+
+    <div class="section-panel">
+        <div class="section-header" @onclick="() => _headerOpen = !_headerOpen">
+            <span>Sales Order Information</span>
+            <span class="chevron">@(_headerOpen ? "︿" : "﹀")</span>
+        </div>
+        @if (_headerOpen)
+        {
+            <div class="section-body">
+                @if (_loading)
+                {
+                    <div class="py-3 text-muted">Memuat data...</div>
+                }
+                else
+                {
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>Sales Order Number <span class="required">*</span></label>
+                            <input class="form-control" placeholder="Input here" @bind="_soNo" disabled="@IsEdit" />
+                        </div>
+                        <div class="form-field">
+                            <label>Customer <span class="required">*</span></label>
+                            <select class="form-select" @bind="_customerId">
+                                <option value="">Select One</option>
+                                @foreach (var c in _customers)
+                                {
+                                    <option value="@c.CustomerId">@c.CustomerName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Order Date <span class="required">*</span></label>
+                            <input class="form-control" type="date" @bind="_orderDate" />
+                        </div>
+                        <div class="form-field">
+                            <label>Address</label>
+                            <textarea class="form-control" rows="3" placeholder="Address here" @bind="_address"></textarea>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="section-panel">
+        <div class="section-header" @onclick="() => _itemsOpen = !_itemsOpen">
+            <span>Detail Item Information</span>
+            <span class="chevron">@(_itemsOpen ? "︿" : "﹀")</span>
+        </div>
+        @if (_itemsOpen)
+        {
+            <div class="section-body">
+                <button class="btn btn-maroon mb-3" @onclick="AddItem">+ Add Item</button>
+
+                <div class="table-panel">
+                    <table class="som-table">
+                        <thead>
+                        <tr>
+                            <th style="width: 50px;">No</th>
+                            <th style="width: 100px;">Action</th>
+                            <th>Item Name</th>
+                            <th style="width: 120px;">QTY</th>
+                            <th style="width: 170px;">Price</th>
+                            <th style="width: 170px;">Total</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @if (_items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-3 text-muted">Belum ada item. Klik "+ Add Item".</td>
+                            </tr>
+                        }
+                        @for (var i = 0; i < _items.Count; i++)
+                        {
+                            var item = _items[i];
+                            if (item.InputMode)
+                            {
+                                <tr class="row-edit">
+                                    <td>@(i + 1)</td>
+                                    <td>
+                                        <button class="btn-icon" title="Simpan Baris" @onclick="() => SaveItemRowAsync(item)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                        </button>
+                                        <button class="btn-icon" title="Batal" @onclick="() => CancelItemRow(item)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.3 9.17 12 2.88 5.71 4.29 4.3 10.59 10.59 16.89 4.3z"/></svg>
+                                        </button>
+                                    </td>
+                                    <td><input class="form-control" placeholder="Item Name" @bind="item.ItemName" /></td>
+                                    <td><input class="form-control" type="number" min="1" @bind="item.Quantity" @bind:culture="Invariant" /></td>
+                                    <td><input class="form-control" type="number" min="0.01" step="0.01" @bind="item.Price" @bind:culture="Invariant" /></td>
+                                    <td></td>
+                                </tr>
+                                @if (item.Errors.Count > 0)
+                                {
+                                    <tr class="row-error">
+                                        <td colspan="6" class="field-error ps-4">@string.Join(" | ", item.Errors)</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td>@(i + 1)</td>
+                                    <td>
+                                        <button class="btn-icon" title="Edit" @onclick="() => EditItemRow(item)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                        </button>
+                                        <button class="btn-icon" title="Delete" @onclick="() => RemoveItem(item)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                                        </button>
+                                    </td>
+                                    <td>@item.ItemName</td>
+                                    <td>@item.Quantity</td>
+                                    <td>@item.Price.ToString("N2", IdCulture)</td>
+                                    <td>@item.Total.ToString("N2", IdCulture)</td>
+                                </tr>
+                            }
+                        }
+                        </tbody>
+                    </table>
+                    <div class="table-footer">
+                        <div class="totals-row">
+                            <span>Total Item&nbsp;&nbsp;: <strong>@_totalItemsCount</strong></span>
+                            <span>Total Amount&nbsp;&nbsp;: <strong>@_grandTotal.ToString("N2", IdCulture)</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-maroon" @onclick="SaveOrderAsync" disabled="@_saving">Save</button>
+                    <button class="btn btn-navy" @onclick="Close">Close</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+}

@@ -1,0 +1,123 @@
+@page "/"
+@rendermode InteractiveServer
+@using FrontEnd.Models
+@using FrontEnd.Services
+@inject CustomerApiService CustomerApi 
+@inject SalesOrderApiService SalesOrderApi
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>Sales Order - SomSales</PageTitle>
+
+<div class="soms-page">
+    <h3 class="page-title">SALES ORDER</h3>
+
+    @if (_showSuccess)
+    {
+        <div class="alert alert-success alert-dismissible">
+            @_successMessage
+            <button type="button" class="btn-close" aria-label="Close" @onclick="DismissSuccess"></button>
+        </div>
+    }
+
+    <div class="search-panel">
+        <div class="search-row">
+            <div class="search-field">
+                <label>Keywords</label>
+                <input class="form-control" placeholder="Type here" @bind="_keyword" @onkeydown="OnSearchEnter" />
+            </div>
+            <div class="search-field">
+                <label>Order Date</label>
+                <input class="form-control" type="date" @bind="_orderDate" />
+            </div>
+            <div class="search-actions">
+                <button class="btn btn-navy" @onclick="SearchAsync">Search</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toolbar-row">
+        <button class="btn btn-maroon" @onclick="AddNewOrder">+ Add New Data</button>
+        <button class="btn btn-navy" @onclick="ExportExcelAsync">Export To Excel</button>
+    </div>
+
+    <div class="table-panel">
+        @if (_loading)
+        {
+            <div class="text-center py-4 text-muted">Memuat data...</div>
+        }
+        else if (_errorMessage is not null)
+        {
+            <div class="text-center py-4 text-danger">@_errorMessage</div>
+        }
+        else
+        {
+            <table class="som-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">No</th>
+                        <th style="width: 120px;">Action</th>
+                        <th>Sales Order</th>
+                        <th>Order Date</th>
+                        <th>Customer</th>
+                        <th>Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < PageItems.Count; i++)
+                    {
+                        var order = PageItems[i];
+                        <tr>
+                            <td>@(CurrentPage * PageSize + i + 1)</td>
+                            <td>
+                                <button class="btn-icon" title="Edit" @onclick="() => EditOrder(order.SalesSoId)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                </button>
+                                <button class="btn-icon" title="Delete" @onclick="() => OpenDeleteConfirm(order)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                                </button>
+                            </td>
+                            <td>@order.SoNo</td>
+                            <td>@order.OrderDate.ToString("dd/MM/yyyy")</td>
+                            <td>@order.CustomerName</td>
+                            <td>@order.Address</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="table-footer">
+                <div class="pagination">
+                    <button class="page-btn" @onclick="() => ChangePage(0)" disabled="@(CurrentPage == 0)">&laquo;</button>
+                    <button class="page-btn" @onclick="() => ChangePage(CurrentPage - 1)" disabled="@(CurrentPage == 0)">&lt;</button>
+                    @foreach (var page in VisiblePages)
+                    {
+                        <button class="page-btn @(page == CurrentPage ? "active" : "")" @onclick="() => ChangePage(page)">@(page + 1)</button>
+                    }
+                    <button class="page-btn" @onclick="() => ChangePage(CurrentPage + 1)" disabled="@(CurrentPage >= TotalPages - 1)">&gt;</button>
+                    <button class="page-btn" @onclick="() => ChangePage(TotalPages - 1)" disabled="@(CurrentPage >= TotalPages - 1)">&raquo;</button>
+                </div>
+                <span class="item-info">@PageInfo</span>
+            </div>
+        }
+    </div>
+</div>
+
+@if (_deleteTarget is not null)
+{
+    <div class="modal-backdrop">
+        <div class="modal-box">
+            <div class="modal-title">Confirm Delete</div>
+            <div class="modal-body">
+                <p>Hapus order <strong>@_deleteTarget.SoNo</strong>? Tindakan ini tidak dapat dibatalkan.</p>
+                @if (_deleteError is not null)
+                {
+                    <p class="text-danger">@_deleteError</p>
+                }
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-navy" @onclick="CloseDeleteConfirm">Batal</button>
+                <button class="btn btn-maroon" @onclick="ConfirmDeleteAsync">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+}

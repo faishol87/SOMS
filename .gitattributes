@@ -1,0 +1,63 @@
+# Normalisasi line endings: semua file teks disimpan sebagai LF di repo.
+# Saat checkout di Windows otomatis jadi CRLF, di Linux/macOS jadi LF.
+* text=auto
+
+# --- File teks: pastikan dinormalisasi (LF di repo) ---
+*.cs        text
+*.csx       text
+*.razor     text
+*.csproj    text
+*.sln       text
+*.slnx      text
+*.props     text
+*.targets   text
+*.ruleset   text
+*.editorconfig text
+*.http      text
+
+*.json      text
+*.sql       text
+*.md        text
+*.txt       text
+
+*.xml       text
+*.config    text
+*.xaml      text
+
+*.css       text
+*.js        text
+*.mjs       text
+*.ts        text
+*.html      text
+*.htm       text
+
+*.yml       text
+*.yaml      text
+*.sh        text
+*.ps1       text
+*.bat       text
+*.cmd       text
+
+# --- File biner: jangan pernah diubah git ---
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.bmp       binary
+*.ico       binary
+*.webp      binary
+*.avif      binary
+*.pdf       binary
+*.zip       binary
+*.tar       binary
+*.gz        binary
+*.7z        binary
+*.dll       binary
+*.exe       binary
+*.pdb       binary
+*.so        binary
+*.dylib     binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.eot       binary
